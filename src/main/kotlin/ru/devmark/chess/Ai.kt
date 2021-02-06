@@ -5,8 +5,9 @@ import ru.devmark.chess.engine.BoardUtils
 import ru.devmark.chess.models.PieceColor
 import ru.devmark.chess.models.Point
 import ru.devmark.chess.models.TurnInfo
-import ru.devmark.chess.pieces.Piece
+import ru.devmark.chess.models.Piece
 
+// todo поправить кейс, когда король под шахом, но другая фигура может его защитить
 class Ai(val color: PieceColor) {
 
     fun nextTurn(board: Board): TurnInfo {
@@ -61,6 +62,8 @@ class Ai(val color: PieceColor) {
         // если есть несколько ходов с одинаковым профитом, то выбор среди них делаем случайно
         return availableTurns.filter { it.profit == maxProfit }.shuffled().first()
     }
+
+    private fun Piece.getPrice() = this.type.price
 
     private companion object {
         val utils = BoardUtils()

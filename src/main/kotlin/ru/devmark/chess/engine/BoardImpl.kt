@@ -3,14 +3,9 @@ package ru.devmark.chess.engine
 import ru.devmark.chess.models.GameState
 import ru.devmark.chess.models.HistoryItem
 import ru.devmark.chess.models.PieceColor
+import ru.devmark.chess.models.PieceType
 import ru.devmark.chess.models.Point
-import ru.devmark.chess.pieces.Bishop
-import ru.devmark.chess.pieces.King
-import ru.devmark.chess.pieces.Knight
-import ru.devmark.chess.pieces.Pawn
-import ru.devmark.chess.pieces.Piece
-import ru.devmark.chess.pieces.Queen
-import ru.devmark.chess.pieces.Rook
+import ru.devmark.chess.models.Piece
 
 class BoardImpl : Board {
 
@@ -25,7 +20,7 @@ class BoardImpl : Board {
      * если какой-то ход ставит короля под удар, то ход исключается из результата
      */
     override fun getSpacesForTurn(piece: Piece): Set<Point> {
-        val spacesForTurn = piece.getSpacesForTurn(pieces)
+        val spacesForTurn = utils.getSpacesForTurn(piece, pieces)
         val result = mutableSetOf<Point>()
         val originalPosition = piece.position
 
@@ -54,10 +49,14 @@ class BoardImpl : Board {
         selectedPiece.position = to
         selectedPiece.wasMove = true
 
-        if (selectedPiece is Pawn) { // todo порефачить превращение пешки и поправить историю для этого кейса
-            val pawn: Pawn = selectedPiece
-            if (pawn.position.y == 0 || pawn.position.y == 7) {
-                pieces[pawn.position] = Queen(pawn.position, pawn.color, true)
+        if (selectedPiece.type == PieceType.PAWN) { // todo порефачить превращение пешки и поправить историю для этого кейса
+            if (selectedPiece.position.y == 0 || selectedPiece.position.y == 7) {
+                pieces[selectedPiece.position] = Piece(
+                    PieceType.QUEEN,
+                    selectedPiece.position,
+                    selectedPiece.color,
+                    true
+                )
             }
         }
 
@@ -93,7 +92,7 @@ class BoardImpl : Board {
         state: GameState
     ) {
         val turnNotation =
-            "${selectedPiece.getLetter()}${from.notation()}${defeatedPiece?.let { "x" } ?: "-"}${to.notation()}${state.notation}"
+            "${selectedPiece.type.notation}${from.notation()}${defeatedPiece?.let { "x" } ?: "-"}${to.notation()}${state.notation}"
 
         if (selectedPiece.color == PieceColor.WHITE) {
             // белые всегда ходят первыми, поэтому для записи их хода всегда создаём новый элемент в истории
@@ -114,44 +113,44 @@ class BoardImpl : Board {
 
     private fun initBoard(): MutableMap<Point, Piece> =
         mutableListOf(
-            Pawn(Point(0, 1), PieceColor.WHITE),
-            Pawn(Point(1, 1), PieceColor.WHITE),
-            Pawn(Point(2, 1), PieceColor.WHITE),
-            Pawn(Point(3, 1), PieceColor.WHITE),
-            Pawn(Point(4, 1), PieceColor.WHITE),
-            Pawn(Point(5, 1), PieceColor.WHITE),
-            Pawn(Point(6, 1), PieceColor.WHITE),
-            Pawn(Point(7, 1), PieceColor.WHITE),
+            Piece(PieceType.PAWN, Point(0, 1), PieceColor.WHITE),
+            Piece(PieceType.PAWN, Point(1, 1), PieceColor.WHITE),
+            Piece(PieceType.PAWN, Point(2, 1), PieceColor.WHITE),
+            Piece(PieceType.PAWN, Point(3, 1), PieceColor.WHITE),
+            Piece(PieceType.PAWN, Point(4, 1), PieceColor.WHITE),
+            Piece(PieceType.PAWN, Point(5, 1), PieceColor.WHITE),
+            Piece(PieceType.PAWN, Point(6, 1), PieceColor.WHITE),
+            Piece(PieceType.PAWN, Point(7, 1), PieceColor.WHITE),
 
-            Pawn(Point(0, 6), PieceColor.BLACK),
-            Pawn(Point(1, 6), PieceColor.BLACK),
-            Pawn(Point(2, 6), PieceColor.BLACK),
-            Pawn(Point(3, 6), PieceColor.BLACK),
-            Pawn(Point(4, 6), PieceColor.BLACK),
-            Pawn(Point(5, 6), PieceColor.BLACK),
-            Pawn(Point(6, 6), PieceColor.BLACK),
-            Pawn(Point(7, 6), PieceColor.BLACK),
+            Piece(PieceType.PAWN, Point(0, 6), PieceColor.BLACK),
+            Piece(PieceType.PAWN, Point(1, 6), PieceColor.BLACK),
+            Piece(PieceType.PAWN, Point(2, 6), PieceColor.BLACK),
+            Piece(PieceType.PAWN, Point(3, 6), PieceColor.BLACK),
+            Piece(PieceType.PAWN, Point(4, 6), PieceColor.BLACK),
+            Piece(PieceType.PAWN, Point(5, 6), PieceColor.BLACK),
+            Piece(PieceType.PAWN, Point(6, 6), PieceColor.BLACK),
+            Piece(PieceType.PAWN, Point(7, 6), PieceColor.BLACK),
 
-            Rook(Point(0, 0), PieceColor.WHITE),
-            Rook(Point(7, 0), PieceColor.WHITE),
-            Rook(Point(0, 7), PieceColor.BLACK),
-            Rook(Point(7, 7), PieceColor.BLACK),
+            Piece(PieceType.ROOK, Point(0, 0), PieceColor.WHITE),
+            Piece(PieceType.ROOK, Point(7, 0), PieceColor.WHITE),
+            Piece(PieceType.ROOK, Point(0, 7), PieceColor.BLACK),
+            Piece(PieceType.ROOK, Point(7, 7), PieceColor.BLACK),
 
-            Bishop(Point(2, 0), PieceColor.WHITE),
-            Bishop(Point(5, 0), PieceColor.WHITE),
-            Bishop(Point(2, 7), PieceColor.BLACK),
-            Bishop(Point(5, 7), PieceColor.BLACK),
+            Piece(PieceType.BISHOP, Point(2, 0), PieceColor.WHITE),
+            Piece(PieceType.BISHOP, Point(5, 0), PieceColor.WHITE),
+            Piece(PieceType.BISHOP, Point(2, 7), PieceColor.BLACK),
+            Piece(PieceType.BISHOP, Point(5, 7), PieceColor.BLACK),
 
-            Queen(Point(3, 7), PieceColor.BLACK),
-            Queen(Point(3, 0), PieceColor.WHITE),
+            Piece(PieceType.QUEEN, Point(3, 7), PieceColor.BLACK),
+            Piece(PieceType.QUEEN, Point(3, 0), PieceColor.WHITE),
 
-            King(Point(4, 7), PieceColor.BLACK),
-            King(Point(4, 0), PieceColor.WHITE),
+            Piece(PieceType.KING, Point(4, 7), PieceColor.BLACK),
+            Piece(PieceType.KING, Point(4, 0), PieceColor.WHITE),
 
-            Knight(Point(1, 0), PieceColor.WHITE),
-            Knight(Point(6, 0), PieceColor.WHITE),
-            Knight(Point(1, 7), PieceColor.BLACK),
-            Knight(Point(6, 7), PieceColor.BLACK)
+            Piece(PieceType.KNIGHT, Point(1, 0), PieceColor.WHITE),
+            Piece(PieceType.KNIGHT, Point(6, 0), PieceColor.WHITE),
+            Piece(PieceType.KNIGHT, Point(1, 7), PieceColor.BLACK),
+            Piece(PieceType.KNIGHT, Point(6, 7), PieceColor.BLACK)
         )
             .associateBy { it.position }
             .toMutableMap()

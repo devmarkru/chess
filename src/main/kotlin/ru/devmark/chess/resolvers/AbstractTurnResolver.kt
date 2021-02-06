@@ -1,7 +1,7 @@
 package ru.devmark.chess.resolvers
 
 import ru.devmark.chess.models.Point
-import ru.devmark.chess.pieces.Piece
+import ru.devmark.chess.models.Piece
 
 abstract class AbstractTurnResolver : TurnResolver {
 

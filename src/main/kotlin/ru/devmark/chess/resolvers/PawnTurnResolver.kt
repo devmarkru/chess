@@ -2,7 +2,7 @@ package ru.devmark.chess.resolvers
 
 import ru.devmark.chess.models.PieceColor
 import ru.devmark.chess.models.Point
-import ru.devmark.chess.pieces.Piece
+import ru.devmark.chess.models.Piece
 
 class PawnTurnResolver : AbstractTurnResolver() {
 

@@ -17,9 +17,9 @@ import javafx.stage.Stage
 import ru.devmark.chess.engine.Board
 import ru.devmark.chess.engine.BoardImpl
 import ru.devmark.chess.models.HistoryItem
+import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.PieceColor
 import ru.devmark.chess.models.Point
-import ru.devmark.chess.pieces.Piece
 import java.util.concurrent.TimeUnit
 
 class ChessApp : Application() {
@@ -42,6 +42,7 @@ class ChessApp : Application() {
         val gc = canvas.graphicsContext2D
         drawBoard(gc, emptySet())
         drawPieces(gc)
+        drawText(gc, "Первый ход белых")
 
         canvas.addEventHandler(
             MouseEvent.MOUSE_CLICKED
@@ -170,6 +171,9 @@ class ChessApp : Application() {
             )
         }
     }
+
+    private fun Piece.getImageName(): String =
+        "${this.color.text}-${this.type.imageName}"
 
     private fun initImages(): Map<String, Image> {
         return mapOf(
