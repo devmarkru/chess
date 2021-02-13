@@ -2,65 +2,63 @@ package ru.devmark.chess
 
 import ru.devmark.chess.engine.Board
 import ru.devmark.chess.engine.BoardUtils
-import ru.devmark.chess.models.PieceColor
-import ru.devmark.chess.models.Point
-import ru.devmark.chess.models.TurnInfo
 import ru.devmark.chess.models.Piece
+import ru.devmark.chess.models.PieceColor
+import ru.devmark.chess.models.PieceType
+import ru.devmark.chess.models.Point
+import ru.devmark.chess.models.PromotionTurn
+import ru.devmark.chess.models.Turn
+import ru.devmark.chess.models.TurnProfitInfo
 
-// todo поправить кейс, когда король под шахом, но другая фигура может его защитить
-class Ai(val color: PieceColor) {
+class Ai(private val color: PieceColor) {
 
-    fun nextTurn(board: Board): TurnInfo {
-        val pieces = board.getPieces()
-        val spacesUnderAttack = utils.getSpacesUnderAttack(pieces).getValue(color.toggle())
-        return rescue(board, pieces, spacesUnderAttack)
-            ?: attack(board, pieces, spacesUnderAttack)
-    }
-
-    private fun rescue(board: Board, pieces: Map<Point, Piece>, spacesUnderAttack: Set<Point>): TurnInfo? {
-        val aiPieces = pieces.values.filter { it.color == color }
-
-        return aiPieces.filter { it.position in spacesUnderAttack }
-            // из тех фигур, что могут быть атакованы, выбираем наиболее ценную
-            .sortedByDescending { it.getPrice() }
-            // среди доступных ей ходов выбираем ту клетку, которая сейчас не атакована
-            .map { it to board.getSpacesForTurn(it).firstOrNull { space -> space !in spacesUnderAttack } }
-            .firstOrNull { it.second != null }
-            ?.let {
-                TurnInfo(
-                    from = it.first.position,
-                    to = it.second!!,
-                    profit = 0
-                )
-            }
-    }
-
-    private fun attack(board: Board, pieces: Map<Point, Piece>, spacesUnderAttack: Set<Point>): TurnInfo {
-        val aiPieces = pieces.values.filter { it.color == color }
-        val availableTurns = mutableSetOf<TurnInfo>()
-
-        aiPieces.forEach { piece ->
-            // для каждой своей фигуры ищем все доступные ходы
-            availableTurns += board.getSpacesForTurn(piece)
-                // исключаем клетки, которые могут быть атакованы соперником в следующем ходу
-                .filter { space -> space !in spacesUnderAttack }
-                .map { space ->
-                    val enemyPiece = pieces[space]
-                    TurnInfo(
-                        from = piece.position,
-                        to = space,
-                        profit = if (enemyPiece != null && enemyPiece.color != color) {
-                            enemyPiece.getPrice()
-                        } else {
-                            0
-                        }
+    fun nextTurn(board: Board): Pair<Point, Turn> {
+        val originalPieces = board.getPieces()
+        val profits = board.getTurnsForColor(color)
+            .entries.map { (from, turns) ->
+                turns.map { turn ->
+                    val pieces = HashMap(originalPieces) // todo уменьшить кол-во копирований
+                    val toType = if (turn is PromotionTurn) { // todo инкапсулировать
+                        turn.toType
+                    } else null
+                    utils.movePiece(pieces, from, turn.to, toType)
+                    val profits = getProfits(pieces)
+                    utils.movePiece(pieces, turn.to, from, toType?.let { PieceType.PAWN })
+                    TurnProfitInfo(
+                        from = from,
+                        turn = turn,
+                        ownProfit = profits.getValue(color),
+                        enemyProfit = profits.getValue(color.other())
                     )
                 }
+            }
+            .flatten()
+
+        val maxOwnProfit = profits.maxOf { it.ownProfit }
+
+        val turnPriceInfo = profits.filter { it.ownProfit == maxOwnProfit }
+            .shuffled() // вносим элемент случайности для ходов с одинаковым профитом
+            .sortedBy { it.enemyProfit } // у соперника должен быть минимальный профит
+            .first()
+
+        return turnPriceInfo.from to turnPriceInfo.turn
+    }
+
+    private fun getProfits(pieces: Map<Point, Piece>): Map<PieceColor, Int> {
+        val profits = hashMapOf<PieceColor, Int>()
+        val spacesUnderAttack = utils.getSpacesUnderAttack(pieces)
+        pieces.forEach { (_, piece) ->
+            profits.incrementProfit(piece.color, piece.getPrice())
+            // если фигура может быть атакована противником, то увеличиваем его профит тоже
+            if (piece.position in spacesUnderAttack.getValue(piece.color.other())) {
+                profits.incrementProfit(piece.color.other(), piece.getPrice())
+            }
         }
-        // среди доступных ходов ищем максимальный профит
-        val maxProfit = availableTurns.map { it.profit }.maxOrNull() ?: 0
-        // если есть несколько ходов с одинаковым профитом, то выбор среди них делаем случайно
-        return availableTurns.filter { it.profit == maxProfit }.shuffled().first()
+        return profits
+    }
+
+    private fun MutableMap<PieceColor, Int>.incrementProfit(color: PieceColor, value: Int) {
+        this[color] = (this[color] ?: 0) + value
     }
 
     private fun Piece.getPrice() = this.type.price

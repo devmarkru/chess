@@ -1,18 +1,19 @@
 package ru.devmark.chess.resolvers
 
-import ru.devmark.chess.models.Point
 import ru.devmark.chess.models.Piece
+import ru.devmark.chess.models.Point
+import ru.devmark.chess.models.Turn
 
-class KnightTurnResolver : AbstractTurnResolver() {
+class KnightTurnGenerator : TurnGenerator {
 
-    override fun getSpacesForTurn(current: Piece, pieces: Map<Point, Piece>): Set<Point> {
-        val spaces = mutableSetOf<Point>()
+    override fun getTurns(current: Piece, pieces: Map<Point, Piece>): Set<Turn> {
+        val spaces = mutableSetOf<Turn>()
         spaces.addPointsIfCan(current, pieces, 1, 2)
         spaces.addPointsIfCan(current, pieces, 2, 1)
         return spaces
     }
 
-    private fun MutableSet<Point>.addPointsIfCan(current: Piece, pieces: Map<Point, Piece>, absX: Int, absY: Int) {
+    private fun MutableSet<Turn>.addPointsIfCan(current: Piece, pieces: Map<Point, Piece>, absX: Int, absY: Int) {
         this.addPointIfCan(current, pieces, absX, absY)
         this.addPointIfCan(current, pieces, absX, -absY)
         this.addPointIfCan(current, pieces, -absX, absY)

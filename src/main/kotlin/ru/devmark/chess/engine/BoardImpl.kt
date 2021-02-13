@@ -2,14 +2,17 @@ package ru.devmark.chess.engine
 
 import ru.devmark.chess.models.GameState
 import ru.devmark.chess.models.HistoryItem
+import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.PieceColor
 import ru.devmark.chess.models.PieceType
 import ru.devmark.chess.models.Point
-import ru.devmark.chess.models.Piece
+import ru.devmark.chess.models.PromotionTurn
+import ru.devmark.chess.models.Turn
 
 class BoardImpl : Board {
 
     private val pieces: MutableMap<Point, Piece> = initBoard()
+    // todo в истории хранить объекты Turn
     private val history = mutableListOf<HistoryItem>()
 
     override fun getPieces(): Map<Point, Piece> = pieces
@@ -19,50 +22,49 @@ class BoardImpl : Board {
      * для указанной фигуры возвращает все доступные для неё клетки
      * если какой-то ход ставит короля под удар, то ход исключается из результата
      */
-    override fun getSpacesForTurn(piece: Piece): Set<Point> {
-        val spacesForTurn = utils.getSpacesForTurn(piece, pieces)
-        val result = mutableSetOf<Point>()
-        val originalPosition = piece.position
+    override fun getTurnsForPiece(piece: Piece): Set<Turn> {
+        val turns = utils.getTurnsForPiece(piece, pieces)
+        val result = mutableSetOf<Turn>()
+        val from = piece.position
 
-        // нужно исключить каждый ход, в результате которого король окажется под ударом
-        val piecesCopy = HashMap(pieces)
-        var lastPosition = piece.position
-        spacesForTurn.forEach { space ->
-            piecesCopy.remove(lastPosition)
-            piece.position = space
-            piecesCopy[space] = piece
+        // нужно исключить каждый ход фигуры, который ставит её короля под удар
+        turns.forEach { turn ->
+            val piecesCopy = HashMap(pieces) // todo минимизировать кол-во копирований мапы
+            val toType = if (turn is PromotionTurn) { // todo инкапсулировать логику перемещения фигуры внутри Turn
+                turn.toType
+            } else null
+            utils.movePiece(piecesCopy, from, turn.to, toType)
             if (!utils.isKingUnderAttack(piecesCopy, piece.color)) {
-                result += space
+                result += turn
             }
-            lastPosition = piece.position
+            utils.movePiece(piecesCopy, turn.to, from, toType?.let { PieceType.PAWN })
         }
-
-        piece.position = originalPosition
         return result
     }
 
-    override fun movePiece(from: Point, to: Point): GameState {
+    override fun getTurnsForColor(color: PieceColor): Map<Point, Set<Turn>> =
+        pieces.filter { it.value.color == color }
+            .map { it.value.position to getTurnsForPiece(it.value) }
+            .filter { it.second.isNotEmpty() }
+            .toMap()
+
+    override fun executeTurn(from: Point, turn: Turn): GameState {
+        val to = turn.to
         val defeatedPiece = pieces[to]
         val selectedPiece = pieces.getValue(from)
         pieces.remove(from)
-        pieces[to] = selectedPiece
+        var promotionType: PieceType? = null
+        if (turn is PromotionTurn) { // todo инкапсулировать в Turn
+            promotionType = turn.toType
+            selectedPiece.type = promotionType
+        }
         selectedPiece.position = to
         selectedPiece.wasMove = true
+        pieces[to] = selectedPiece
 
-        if (selectedPiece.type == PieceType.PAWN) { // todo порефачить превращение пешки и поправить историю для этого кейса
-            if (selectedPiece.position.y == 0 || selectedPiece.position.y == 7) {
-                pieces[selectedPiece.position] = Piece(
-                    PieceType.QUEEN,
-                    selectedPiece.position,
-                    selectedPiece.color,
-                    true
-                )
-            }
-        }
+        val state = getGameState(pieces, selectedPiece.color.other())
 
-        val state = getGameState(pieces, selectedPiece.color.toggle())
-
-        saveTurnHistory(selectedPiece, from, defeatedPiece, to, state)
+        saveTurnHistory(selectedPiece, from, to, defeatedPiece, promotionType, state)
 
         return state
     }
@@ -72,7 +74,7 @@ class BoardImpl : Board {
 
         val hasAvailableTurns = pieces
             .filter { it.value.color == kingColor }
-            .map { getSpacesForTurn(it.value).filter { space -> space != it.value.position } }
+            .map { getTurnsForPiece(it.value).filter { turn -> turn.to != it.value.position } }
             .flatten()
             .isNotEmpty()
 
@@ -87,12 +89,13 @@ class BoardImpl : Board {
     private fun saveTurnHistory(
         selectedPiece: Piece,
         from: Point,
-        defeatedPiece: Piece?,
         to: Point,
+        defeatedPiece: Piece?,
+        promotionType: PieceType?,
         state: GameState
     ) {
         val turnNotation =
-            "${selectedPiece.type.notation}${from.notation()}${defeatedPiece?.let { "x" } ?: "-"}${to.notation()}${state.notation}"
+            "${selectedPiece.type.notation}${from.notation()}${defeatedPiece?.let { "x" } ?: "-"}${to.notation()}${promotionType?.notation ?: ""}${state.notation}"
 
         if (selectedPiece.color == PieceColor.WHITE) {
             // белые всегда ходят первыми, поэтому для записи их хода всегда создаём новый элемент в истории

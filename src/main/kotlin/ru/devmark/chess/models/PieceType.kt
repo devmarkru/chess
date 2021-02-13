@@ -1,10 +1,15 @@
 package ru.devmark.chess.models
 
-enum class PieceType(val imageName: String, val price: Int, val notation: String) {
-    PAWN("pawn", 1, ""),         // пешка
-    KNIGHT("knight", 3, "N"),    // конь
-    BISHOP("bishop", 3, "B"),    // слон
-    ROOK("rook", 5, "R"),        // ладья
-    QUEEN("queen", 9, "Q"),      // ферзь
-    KING("king", 1_000_000, "K") // король
+enum class PieceType(
+    val nameEn: String,
+    val nameRu: String,
+    val price: Int,
+    val notation: String
+) {
+    PAWN("pawn", "пешка", 100, ""),
+    KNIGHT("knight", "конь", 320, "N"),
+    BISHOP("bishop", "слон", 330, "B"),
+    ROOK("rook", "ладья", 500, "R"),
+    QUEEN("queen", "ферзь", 900, "Q"),
+    KING("king", "король", 20_000, "K")
 }

@@ -4,7 +4,7 @@ enum class PieceColor(val text: String) {
     WHITE("white"),
     BLACK("black");
 
-    fun toggle(): PieceColor =
+    fun other(): PieceColor =
         when (this) {
             WHITE -> BLACK
             BLACK -> WHITE

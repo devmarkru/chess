@@ -6,6 +6,7 @@ import javafx.scene.Group
 import javafx.scene.Scene
 import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
+import javafx.scene.control.ChoiceDialog
 import javafx.scene.image.Image
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
@@ -19,7 +20,9 @@ import ru.devmark.chess.engine.BoardImpl
 import ru.devmark.chess.models.HistoryItem
 import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.PieceColor
+import ru.devmark.chess.models.PieceType
 import ru.devmark.chess.models.Point
+import ru.devmark.chess.models.PromotionTurn
 import java.util.concurrent.TimeUnit
 
 class ChessApp : Application() {
@@ -74,7 +77,7 @@ class ChessApp : Application() {
     private fun processLeftMouseButton(selectedPoint: Point, gc: GraphicsContext) {
         board.getPieces()[selectedPoint]?.let { piece ->
             selectedPiece = piece
-            val availableSpaces = board.getSpacesForTurn(piece).toMutableSet()
+            val availableSpaces = board.getTurnsForPiece(piece).map { it.to }.toMutableSet()
             drawBoard(gc, availableSpaces + selectedPoint)
             drawPieces(gc)
         }
@@ -82,27 +85,55 @@ class ChessApp : Application() {
 
     private fun processRightMouseButton(selectedPoint: Point, gc: GraphicsContext) {
         if (selectedPiece != null) {
-            val movingPiece = selectedPiece
-            if (movingPiece != null && selectedPoint in board.getSpacesForTurn(movingPiece)) {
-                val gameState = board.movePiece(movingPiece.position, selectedPoint)
-                selectedPiece = null
-                displayLastTurn(gc, board.getHistory().last())
-                drawBoard(gc, emptySet())
-                drawPieces(gc)
-
-                if (!gameState.isFinal) {
-                    Thread {
-                        TimeUnit.MILLISECONDS.sleep(500)
-                        val (from, to) = ai.nextTurn(board)
-                        board.movePiece(from, to)
-                        selectedPiece = null
-                        displayLastTurn(gc, board.getHistory().last())
-                        drawBoard(gc, emptySet())
-                        drawPieces(gc)
-                    }.start()
+            val movingPiece = selectedPiece as Piece
+            val turns = board.getTurnsForPiece(movingPiece)
+            val selectedTurns = turns.filter { it.to == selectedPoint }
+            val selectedTurn = if (selectedTurns.size > 1) {
+                val newPieceType = showPromotionDialog()
+                selectedTurns.first {
+                    (it as PromotionTurn).toType == newPieceType
                 }
+            } else {
+                selectedTurns.first()
+            }
+            val gameState = board.executeTurn(movingPiece.position, selectedTurn)
+            selectedPiece = null
+            displayLastTurn(gc, board.getHistory().last())
+            drawBoard(gc, emptySet())
+            drawPieces(gc)
+
+            if (!gameState.isFinal) {
+                Thread {
+                    TimeUnit.MILLISECONDS.sleep(500)
+                    val (from, aiTurn) = ai.nextTurn(board)
+                    board.executeTurn(from, aiTurn)
+                    selectedPiece = null
+                    displayLastTurn(gc, board.getHistory().last())
+                    drawBoard(gc, emptySet())
+                    drawPieces(gc)
+                }.start()
             }
         }
+    }
+
+    private fun showPromotionDialog(): PieceType {
+        val piecesForPromotion = listOf(
+            PieceType.QUEEN,
+            PieceType.ROOK,
+            PieceType.BISHOP,
+            PieceType.KNIGHT
+        )
+        val choices = piecesForPromotion.map { it.nameRu }
+        val dialog: ChoiceDialog<String> = ChoiceDialog<String>(
+            choices.first(),
+            choices
+        )
+        dialog.headerText = "В какую фигуру превратить пешку?"
+        dialog.title = "Превращение пешки"
+        dialog.contentText = "Выберите фигуру:"
+
+        val choice: String = dialog.showAndWait().orElse(choices.first())
+        return piecesForPromotion[choices.indexOf(choice)]
     }
 
     private fun drawBoard(gc: GraphicsContext, selectedSpaces: Set<Point>) {
@@ -173,7 +204,7 @@ class ChessApp : Application() {
     }
 
     private fun Piece.getImageName(): String =
-        "${this.color.text}-${this.type.imageName}"
+        "${this.color.text}-${this.type.nameEn}"
 
     private fun initImages(): Map<String, Image> {
         return mapOf(
