@@ -13,9 +13,9 @@ interface Board {
 
     fun getHistory(): List<HistoryItem>
 
-    fun getTurnsForPiece(piece: Piece): Set<Turn>
+    fun getTurnsForPiece(position: Point): Set<Turn>
 
     fun getTurnsForColor(color: PieceColor): Map<Point, Set<Turn>>
 
-    fun executeTurn(from: Point, turn: Turn): GameState
+    fun executeTurn(turn: Turn): GameState
 }

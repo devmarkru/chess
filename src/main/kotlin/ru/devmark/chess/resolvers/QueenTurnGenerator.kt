@@ -6,10 +6,10 @@ import ru.devmark.chess.models.Turn
 
 class QueenTurnGenerator : TurnGenerator {
 
-    override fun getTurns(current: Piece, pieces: Map<Point, Piece>): Set<Turn> {
+    override fun getTurns(position: Point, pieces: Map<Point, Piece>): Set<Turn> {
         val spaces = mutableSetOf<Turn>()
-        spaces.addAll(generateRectangularTurns(current, pieces, MAX_RANGE))
-        spaces.addAll(generateDiagonalTurns(current, pieces, MAX_RANGE))
+        spaces.addAll(generateRectangularTurns(position, pieces, MAX_RANGE))
+        spaces.addAll(generateDiagonalTurns(position, pieces, MAX_RANGE))
         return spaces
     }
 

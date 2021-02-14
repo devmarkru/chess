@@ -10,44 +10,35 @@ import ru.devmark.chess.models.Turn
 
 class PawnTurnGenerator : TurnGenerator {
 
-    override fun getTurns(current: Piece, pieces: Map<Point, Piece>): Set<Turn> {
-        val spaces = mutableSetOf<Point>()
-        val directionY = getDirectionY(current)
-        val range = if (current.wasMove) 1 else 2
-        val position = current.position
+    override fun getTurns(position: Point, pieces: Map<Point, Piece>): Set<Turn> {
+        val turns = mutableSetOf<Turn>()
+        val current = pieces.getValue(position)
+        // первый ход пешка может сделать на 2 клетки вперёд
+        val range = if (position.y == getStartY(current.color)) 2 else 1
+        val from = position
+        val directionY = getDirectionY(current.color)
         for (i in 1..range) {
-            val point = Point(
-                position.x, position.y + directionY * i
-            )
-            if (point in pieces) {
+            val to = Point(from.x, from.y + directionY * i)
+            if (to in pieces) {
                 break
             } else {
-                spaces += point
+                turns.addTurnWithPromotionCheck(position, current, to, null)
             }
         }
-        checkAttackPoint(current, 1, directionY, pieces, spaces)
-        checkAttackPoint(current, -1, directionY, pieces, spaces)
-        val promotionY = getPromotionY(current.color)
-        return spaces
-            .filter { it.x in 0..7 && it.y in 0..7 }
-            .map {
-                if (it.y == promotionY) {
-                    // достигнув края доски, пешка превращается в одну из четырёх фигур
-                    listOf(
-                        PromotionTurn(to = it, toType = PieceType.KNIGHT),
-                        PromotionTurn(to = it, toType = PieceType.BISHOP),
-                        PromotionTurn(to = it, toType = PieceType.ROOK),
-                        PromotionTurn(to = it, toType = PieceType.QUEEN)
-                    )
-                } else {
-                    listOf(NormalTurn(to = it))
-                }
-            }
-            .flatten()
+        addAttackPoint(position, current, 1, directionY, pieces, turns)
+        addAttackPoint(position, current, -1, directionY, pieces, turns)
+
+        return turns
+            .filter { it.to.x in 0..7 && it.to.y in 0..7 }
             .toSet()
     }
 
-    private fun getDirectionY(current: Piece) = when (current.color) {
+    private fun getStartY(color: PieceColor) = when (color) {
+        PieceColor.WHITE -> 1
+        PieceColor.BLACK -> 6
+    }
+
+    private fun getDirectionY(color: PieceColor) = when (color) {
         PieceColor.WHITE -> 1
         PieceColor.BLACK -> -1
     }
@@ -57,18 +48,36 @@ class PawnTurnGenerator : TurnGenerator {
         PieceColor.BLACK -> 0
     }
 
-    private fun checkAttackPoint(
+    private fun addAttackPoint(
+        position: Point,
         current: Piece,
         deltaX: Int,
         deltaY: Int,
         pieces: Map<Point, Piece>,
-        spaces: MutableSet<Point>
+        turns: MutableSet<Turn>
     ) {
-        val position = current.position
         val attackPoint = Point(position.x + deltaX, position.y + deltaY)
-        val attackedPiece = pieces[attackPoint]
-        if (attackedPiece != null && attackedPiece.color != current.color) {
-            spaces += attackPoint
+        val enemyPiece = pieces[attackPoint]
+        if (enemyPiece != null && enemyPiece.color != current.color) {
+            turns.addTurnWithPromotionCheck(position, current, attackPoint, enemyPiece)
+        }
+    }
+
+    private fun MutableSet<Turn>.addTurnWithPromotionCheck(
+        position: Point,
+        current: Piece,
+        to: Point,
+        enemyPiece: Piece?
+    ) {
+        val promotionY = getPromotionY(current.color)
+        val from = position
+        if (to.y == promotionY) {
+            this += PromotionTurn(from = from, to = to, enemyPiece = enemyPiece, toType = PieceType.KNIGHT)
+            this += PromotionTurn(from = from, to = to, enemyPiece = enemyPiece, toType = PieceType.BISHOP)
+            this += PromotionTurn(from = from, to = to, enemyPiece = enemyPiece, toType = PieceType.ROOK)
+            this += PromotionTurn(from = from, to = to, enemyPiece = enemyPiece, toType = PieceType.QUEEN)
+        } else {
+            this += NormalTurn(from = from, to = to, enemyPiece = enemyPiece)
         }
     }
 }

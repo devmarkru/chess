@@ -22,49 +22,35 @@ class BoardImpl : Board {
      * для указанной фигуры возвращает все доступные для неё клетки
      * если какой-то ход ставит короля под удар, то ход исключается из результата
      */
-    override fun getTurnsForPiece(piece: Piece): Set<Turn> {
-        val turns = utils.getTurnsForPiece(piece, pieces)
+    override fun getTurnsForPiece(position: Point): Set<Turn> {
+        val turns = utils.getTurnsForPiece(position, pieces)
         val result = mutableSetOf<Turn>()
-        val from = piece.position
+        val kingColor = pieces.getValue(position).color
 
         // нужно исключить каждый ход фигуры, который ставит её короля под удар
         turns.forEach { turn ->
-            val piecesCopy = HashMap(pieces) // todo минимизировать кол-во копирований мапы
-            val toType = if (turn is PromotionTurn) { // todo инкапсулировать логику перемещения фигуры внутри Turn
-                turn.toType
-            } else null
-            utils.movePiece(piecesCopy, from, turn.to, toType)
-            if (!utils.isKingUnderAttack(piecesCopy, piece.color)) {
+            turn.execute(pieces)
+            if (!utils.isKingUnderAttack(pieces, kingColor)) {
                 result += turn
             }
-            utils.movePiece(piecesCopy, turn.to, from, toType?.let { PieceType.PAWN })
+            turn.revert(pieces)
         }
         return result
     }
 
     override fun getTurnsForColor(color: PieceColor): Map<Point, Set<Turn>> =
         pieces.filter { it.value.color == color }
-            .map { it.value.position to getTurnsForPiece(it.value) }
+            .map { it.key to getTurnsForPiece(it.key) }
             .filter { it.second.isNotEmpty() }
             .toMap()
 
-    override fun executeTurn(from: Point, turn: Turn): GameState {
-        val to = turn.to
-        val defeatedPiece = pieces[to]
-        val selectedPiece = pieces.getValue(from)
-        pieces.remove(from)
-        var promotionType: PieceType? = null
-        if (turn is PromotionTurn) { // todo инкапсулировать в Turn
-            promotionType = turn.toType
-            selectedPiece.type = promotionType
-        }
-        selectedPiece.position = to
-        selectedPiece.wasMove = true
-        pieces[to] = selectedPiece
+    override fun executeTurn(turn: Turn): GameState {
+        val selectedPiece = pieces.getValue(turn.from)
+        turn.execute(pieces)
 
         val state = getGameState(pieces, selectedPiece.color.other())
 
-        saveTurnHistory(selectedPiece, from, to, defeatedPiece, promotionType, state)
+        saveTurnHistory(selectedPiece, turn, state)
 
         return state
     }
@@ -74,7 +60,7 @@ class BoardImpl : Board {
 
         val hasAvailableTurns = pieces
             .filter { it.value.color == kingColor }
-            .map { getTurnsForPiece(it.value).filter { turn -> turn.to != it.value.position } }
+            .map { getTurnsForPiece(it.key) }
             .flatten()
             .isNotEmpty()
 
@@ -88,14 +74,18 @@ class BoardImpl : Board {
 
     private fun saveTurnHistory(
         selectedPiece: Piece,
-        from: Point,
-        to: Point,
-        defeatedPiece: Piece?,
-        promotionType: PieceType?,
+        turn: Turn,
         state: GameState
     ) {
+        val from = turn.from
+        val to = turn.to
+        val enemyPieceType = turn.enemyPiece
+        val toType = if (turn is PromotionTurn) {
+            turn.toType
+        } else null
+        // todo добавить в Turn тип исходной фигуры и переопределить toString()
         val turnNotation =
-            "${selectedPiece.type.notation}${from.notation()}${defeatedPiece?.let { "x" } ?: "-"}${to.notation()}${promotionType?.notation ?: ""}${state.notation}"
+            "${selectedPiece.type.notation}${from.notation()}${enemyPieceType?.let { "x" } ?: "-"}${to.notation()}${toType?.notation ?: ""}${state.notation}"
 
         if (selectedPiece.color == PieceColor.WHITE) {
             // белые всегда ходят первыми, поэтому для записи их хода всегда создаём новый элемент в истории
@@ -115,48 +105,46 @@ class BoardImpl : Board {
     private fun Point.notation(): String = "${LETTERS[this.x]}${this.y + 1}"
 
     private fun initBoard(): MutableMap<Point, Piece> =
-        mutableListOf(
-            Piece(PieceType.PAWN, Point(0, 1), PieceColor.WHITE),
-            Piece(PieceType.PAWN, Point(1, 1), PieceColor.WHITE),
-            Piece(PieceType.PAWN, Point(2, 1), PieceColor.WHITE),
-            Piece(PieceType.PAWN, Point(3, 1), PieceColor.WHITE),
-            Piece(PieceType.PAWN, Point(4, 1), PieceColor.WHITE),
-            Piece(PieceType.PAWN, Point(5, 1), PieceColor.WHITE),
-            Piece(PieceType.PAWN, Point(6, 1), PieceColor.WHITE),
-            Piece(PieceType.PAWN, Point(7, 1), PieceColor.WHITE),
+        mutableMapOf(
+            Point(0, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
+            Point(1, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
+            Point(2, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
+            Point(3, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
+            Point(4, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
+            Point(5, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
+            Point(6, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
+            Point(7, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
 
-            Piece(PieceType.PAWN, Point(0, 6), PieceColor.BLACK),
-            Piece(PieceType.PAWN, Point(1, 6), PieceColor.BLACK),
-            Piece(PieceType.PAWN, Point(2, 6), PieceColor.BLACK),
-            Piece(PieceType.PAWN, Point(3, 6), PieceColor.BLACK),
-            Piece(PieceType.PAWN, Point(4, 6), PieceColor.BLACK),
-            Piece(PieceType.PAWN, Point(5, 6), PieceColor.BLACK),
-            Piece(PieceType.PAWN, Point(6, 6), PieceColor.BLACK),
-            Piece(PieceType.PAWN, Point(7, 6), PieceColor.BLACK),
+            Point(0, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
+            Point(1, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
+            Point(2, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
+            Point(3, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
+            Point(4, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
+            Point(5, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
+            Point(6, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
+            Point(7, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
 
-            Piece(PieceType.ROOK, Point(0, 0), PieceColor.WHITE),
-            Piece(PieceType.ROOK, Point(7, 0), PieceColor.WHITE),
-            Piece(PieceType.ROOK, Point(0, 7), PieceColor.BLACK),
-            Piece(PieceType.ROOK, Point(7, 7), PieceColor.BLACK),
+            Point(0, 0) to Piece(PieceType.ROOK, PieceColor.WHITE),
+            Point(7, 0) to Piece(PieceType.ROOK, PieceColor.WHITE),
+            Point(0, 7) to Piece(PieceType.ROOK, PieceColor.BLACK),
+            Point(7, 7) to Piece(PieceType.ROOK, PieceColor.BLACK),
 
-            Piece(PieceType.BISHOP, Point(2, 0), PieceColor.WHITE),
-            Piece(PieceType.BISHOP, Point(5, 0), PieceColor.WHITE),
-            Piece(PieceType.BISHOP, Point(2, 7), PieceColor.BLACK),
-            Piece(PieceType.BISHOP, Point(5, 7), PieceColor.BLACK),
+            Point(2, 0) to Piece(PieceType.BISHOP, PieceColor.WHITE),
+            Point(5, 0) to Piece(PieceType.BISHOP, PieceColor.WHITE),
+            Point(2, 7) to Piece(PieceType.BISHOP, PieceColor.BLACK),
+            Point(5, 7) to Piece(PieceType.BISHOP, PieceColor.BLACK),
 
-            Piece(PieceType.QUEEN, Point(3, 7), PieceColor.BLACK),
-            Piece(PieceType.QUEEN, Point(3, 0), PieceColor.WHITE),
+            Point(3, 7) to Piece(PieceType.QUEEN, PieceColor.BLACK),
+            Point(3, 0) to Piece(PieceType.QUEEN, PieceColor.WHITE),
 
-            Piece(PieceType.KING, Point(4, 7), PieceColor.BLACK),
-            Piece(PieceType.KING, Point(4, 0), PieceColor.WHITE),
+            Point(4, 7) to Piece(PieceType.KING, PieceColor.BLACK),
+            Point(4, 0) to Piece(PieceType.KING, PieceColor.WHITE),
 
-            Piece(PieceType.KNIGHT, Point(1, 0), PieceColor.WHITE),
-            Piece(PieceType.KNIGHT, Point(6, 0), PieceColor.WHITE),
-            Piece(PieceType.KNIGHT, Point(1, 7), PieceColor.BLACK),
-            Piece(PieceType.KNIGHT, Point(6, 7), PieceColor.BLACK)
+            Point(1, 0) to Piece(PieceType.KNIGHT, PieceColor.WHITE),
+            Point(6, 0) to Piece(PieceType.KNIGHT, PieceColor.WHITE),
+            Point(1, 7) to Piece(PieceType.KNIGHT, PieceColor.BLACK),
+            Point(6, 7) to Piece(PieceType.KNIGHT, PieceColor.BLACK)
         )
-            .associateBy { it.position }
-            .toMutableMap()
 
     private companion object {
         const val LETTERS = "abcdefgh"

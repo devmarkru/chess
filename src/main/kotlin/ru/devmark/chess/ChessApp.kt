@@ -30,7 +30,7 @@ class ChessApp : Application() {
     private val images = initImages()
     private val board: Board = BoardImpl()
 
-    private var selectedPiece: Piece? = null
+    private var selectedPiecePoint: Point? = null
 
     private val ai = Ai(PieceColor.BLACK)
 
@@ -76,17 +76,16 @@ class ChessApp : Application() {
 
     private fun processLeftMouseButton(selectedPoint: Point, gc: GraphicsContext) {
         board.getPieces()[selectedPoint]?.let { piece ->
-            selectedPiece = piece
-            val availableSpaces = board.getTurnsForPiece(piece).map { it.to }.toMutableSet()
+            selectedPiecePoint = selectedPoint
+            val availableSpaces = board.getTurnsForPiece(selectedPoint).map { it.to }.toMutableSet()
             drawBoard(gc, availableSpaces + selectedPoint)
             drawPieces(gc)
         }
     }
 
     private fun processRightMouseButton(selectedPoint: Point, gc: GraphicsContext) {
-        if (selectedPiece != null) {
-            val movingPiece = selectedPiece as Piece
-            val turns = board.getTurnsForPiece(movingPiece)
+        if (selectedPiecePoint != null) {
+            val turns = board.getTurnsForPiece(selectedPiecePoint!!)
             val selectedTurns = turns.filter { it.to == selectedPoint }
             val selectedTurn = if (selectedTurns.size > 1) {
                 val newPieceType = showPromotionDialog()
@@ -96,8 +95,8 @@ class ChessApp : Application() {
             } else {
                 selectedTurns.first()
             }
-            val gameState = board.executeTurn(movingPiece.position, selectedTurn)
-            selectedPiece = null
+            val gameState = board.executeTurn(selectedTurn)
+            selectedPiecePoint = null
             displayLastTurn(gc, board.getHistory().last())
             drawBoard(gc, emptySet())
             drawPieces(gc)
@@ -105,9 +104,9 @@ class ChessApp : Application() {
             if (!gameState.isFinal) {
                 Thread {
                     TimeUnit.MILLISECONDS.sleep(500)
-                    val (from, aiTurn) = ai.nextTurn(board)
-                    board.executeTurn(from, aiTurn)
-                    selectedPiece = null
+                    val aiTurn = ai.nextTurn(board)
+                    board.executeTurn(aiTurn)
+                    selectedPiecePoint = null
                     displayLastTurn(gc, board.getHistory().last())
                     drawBoard(gc, emptySet())
                     drawPieces(gc)

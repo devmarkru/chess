@@ -4,26 +4,20 @@ import ru.devmark.chess.engine.Board
 import ru.devmark.chess.engine.BoardUtils
 import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.PieceColor
-import ru.devmark.chess.models.PieceType
 import ru.devmark.chess.models.Point
-import ru.devmark.chess.models.PromotionTurn
 import ru.devmark.chess.models.Turn
 import ru.devmark.chess.models.TurnProfitInfo
 
 class Ai(private val color: PieceColor) {
 
-    fun nextTurn(board: Board): Pair<Point, Turn> {
-        val originalPieces = board.getPieces()
+    fun nextTurn(board: Board): Turn {
+        val pieces = HashMap(board.getPieces())
         val profits = board.getTurnsForColor(color)
             .entries.map { (from, turns) ->
                 turns.map { turn ->
-                    val pieces = HashMap(originalPieces) // todo уменьшить кол-во копирований
-                    val toType = if (turn is PromotionTurn) { // todo инкапсулировать
-                        turn.toType
-                    } else null
-                    utils.movePiece(pieces, from, turn.to, toType)
+                    turn.execute(pieces)
                     val profits = getProfits(pieces)
-                    utils.movePiece(pieces, turn.to, from, toType?.let { PieceType.PAWN })
+                    turn.revert(pieces)
                     TurnProfitInfo(
                         from = from,
                         turn = turn,
@@ -41,16 +35,16 @@ class Ai(private val color: PieceColor) {
             .sortedBy { it.enemyProfit } // у соперника должен быть минимальный профит
             .first()
 
-        return turnPriceInfo.from to turnPriceInfo.turn
+        return turnPriceInfo.turn
     }
 
     private fun getProfits(pieces: Map<Point, Piece>): Map<PieceColor, Int> {
         val profits = hashMapOf<PieceColor, Int>()
         val spacesUnderAttack = utils.getSpacesUnderAttack(pieces)
-        pieces.forEach { (_, piece) ->
+        pieces.forEach { (position, piece) ->
             profits.incrementProfit(piece.color, piece.getPrice())
             // если фигура может быть атакована противником, то увеличиваем его профит тоже
-            if (piece.position in spacesUnderAttack.getValue(piece.color.other())) {
+            if (position in spacesUnderAttack.getValue(piece.color.other())) {
                 profits.incrementProfit(piece.color.other(), piece.getPrice())
             }
         }
