@@ -1,10 +1,11 @@
-package ru.devmark.chess.engine
+package ru.devmark.chess.engine.impl
 
+import ru.devmark.chess.engine.Board
+import ru.devmark.chess.engine.PieceFactory
 import ru.devmark.chess.models.GameState
 import ru.devmark.chess.models.HistoryItem
 import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.PieceColor
-import ru.devmark.chess.models.PieceType
 import ru.devmark.chess.models.Point
 import ru.devmark.chess.models.PromotionTurn
 import ru.devmark.chess.models.Turn
@@ -12,6 +13,7 @@ import ru.devmark.chess.models.Turn
 class BoardImpl : Board {
 
     private val pieces: MutableMap<Point, Piece> = initBoard()
+
     // todo в истории хранить объекты Turn
     private val history = mutableListOf<HistoryItem>()
 
@@ -23,14 +25,14 @@ class BoardImpl : Board {
      * если какой-то ход ставит короля под удар, то ход исключается из результата
      */
     override fun getTurnsForPiece(position: Point): Set<Turn> {
-        val turns = utils.getTurnsForPiece(position, pieces)
+        val turns = UTILS.getTurnsForPiece(position, pieces)
         val result = mutableSetOf<Turn>()
         val kingColor = pieces.getValue(position).color
 
         // нужно исключить каждый ход фигуры, который ставит её короля под удар
         turns.forEach { turn ->
             turn.execute(pieces)
-            if (!utils.isKingUnderAttack(pieces, kingColor)) {
+            if (!UTILS.isKingUnderAttack(pieces, kingColor)) {
                 result += turn
             }
             turn.revert(pieces)
@@ -56,7 +58,7 @@ class BoardImpl : Board {
     }
 
     private fun getGameState(pieces: Map<Point, Piece>, kingColor: PieceColor): GameState {
-        val isKingUnderAttack = utils.isKingUnderAttack(pieces, kingColor)
+        val isKingUnderAttack = UTILS.isKingUnderAttack(pieces, kingColor)
 
         val hasAvailableTurns = pieces
             .filter { it.value.color == kingColor }
@@ -106,49 +108,57 @@ class BoardImpl : Board {
 
     private fun initBoard(): MutableMap<Point, Piece> =
         mutableMapOf(
-            Point(0, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
-            Point(1, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
-            Point(2, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
-            Point(3, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
-            Point(4, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
-            Point(5, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
-            Point(6, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
-            Point(7, 1) to Piece(PieceType.PAWN, PieceColor.WHITE),
+            // белые фигуры
+            Point(0, 1) to WHITE_FACTORY.createPawn(),
+            Point(1, 1) to WHITE_FACTORY.createPawn(),
+            Point(2, 1) to WHITE_FACTORY.createPawn(),
+            Point(3, 1) to WHITE_FACTORY.createPawn(),
+            Point(4, 1) to WHITE_FACTORY.createPawn(),
+            Point(5, 1) to WHITE_FACTORY.createPawn(),
+            Point(6, 1) to WHITE_FACTORY.createPawn(),
+            Point(7, 1) to WHITE_FACTORY.createPawn(),
 
-            Point(0, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
-            Point(1, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
-            Point(2, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
-            Point(3, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
-            Point(4, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
-            Point(5, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
-            Point(6, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
-            Point(7, 6) to Piece(PieceType.PAWN, PieceColor.BLACK),
+            Point(1, 0) to WHITE_FACTORY.createKnight(),
+            Point(6, 0) to WHITE_FACTORY.createKnight(),
 
-            Point(0, 0) to Piece(PieceType.ROOK, PieceColor.WHITE),
-            Point(7, 0) to Piece(PieceType.ROOK, PieceColor.WHITE),
-            Point(0, 7) to Piece(PieceType.ROOK, PieceColor.BLACK),
-            Point(7, 7) to Piece(PieceType.ROOK, PieceColor.BLACK),
+            Point(2, 0) to WHITE_FACTORY.createBishop(),
+            Point(5, 0) to WHITE_FACTORY.createBishop(),
 
-            Point(2, 0) to Piece(PieceType.BISHOP, PieceColor.WHITE),
-            Point(5, 0) to Piece(PieceType.BISHOP, PieceColor.WHITE),
-            Point(2, 7) to Piece(PieceType.BISHOP, PieceColor.BLACK),
-            Point(5, 7) to Piece(PieceType.BISHOP, PieceColor.BLACK),
+            Point(0, 0) to WHITE_FACTORY.createRook(),
+            Point(7, 0) to WHITE_FACTORY.createRook(),
 
-            Point(3, 7) to Piece(PieceType.QUEEN, PieceColor.BLACK),
-            Point(3, 0) to Piece(PieceType.QUEEN, PieceColor.WHITE),
+            // королева всегда стоит на поле своего цвета
+            Point(3, 0) to WHITE_FACTORY.createQueen(),
+            Point(4, 0) to WHITE_FACTORY.createKing(),
 
-            Point(4, 7) to Piece(PieceType.KING, PieceColor.BLACK),
-            Point(4, 0) to Piece(PieceType.KING, PieceColor.WHITE),
+            // чёрные фигуры
+            Point(0, 6) to BLACK_FACTORY.createPawn(),
+            Point(1, 6) to BLACK_FACTORY.createPawn(),
+            Point(2, 6) to BLACK_FACTORY.createPawn(),
+            Point(3, 6) to BLACK_FACTORY.createPawn(),
+            Point(4, 6) to BLACK_FACTORY.createPawn(),
+            Point(5, 6) to BLACK_FACTORY.createPawn(),
+            Point(6, 6) to BLACK_FACTORY.createPawn(),
+            Point(7, 6) to BLACK_FACTORY.createPawn(),
 
-            Point(1, 0) to Piece(PieceType.KNIGHT, PieceColor.WHITE),
-            Point(6, 0) to Piece(PieceType.KNIGHT, PieceColor.WHITE),
-            Point(1, 7) to Piece(PieceType.KNIGHT, PieceColor.BLACK),
-            Point(6, 7) to Piece(PieceType.KNIGHT, PieceColor.BLACK)
+            Point(1, 7) to BLACK_FACTORY.createKnight(),
+            Point(6, 7) to BLACK_FACTORY.createKnight(),
+
+            Point(2, 7) to BLACK_FACTORY.createBishop(),
+            Point(5, 7) to BLACK_FACTORY.createBishop(),
+
+            Point(0, 7) to BLACK_FACTORY.createRook(),
+            Point(7, 7) to BLACK_FACTORY.createRook(),
+
+            Point(3, 7) to BLACK_FACTORY.createQueen(),
+            Point(4, 7) to BLACK_FACTORY.createKing()
         )
 
     private companion object {
         const val LETTERS = "abcdefgh"
 
-        val utils = BoardUtils()
+        val UTILS = BoardUtils()
+        val WHITE_FACTORY: PieceFactory = WhitePieceFactory()
+        val BLACK_FACTORY: PieceFactory = BlackPieceFactory()
     }
 }

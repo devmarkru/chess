@@ -1,4 +1,4 @@
-package ru.devmark.chess.engine
+package ru.devmark.chess.engine.impl
 
 import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.PieceColor

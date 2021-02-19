@@ -16,7 +16,7 @@ import javafx.scene.paint.Color
 import javafx.scene.text.Font
 import javafx.stage.Stage
 import ru.devmark.chess.engine.Board
-import ru.devmark.chess.engine.BoardImpl
+import ru.devmark.chess.engine.impl.BoardImpl
 import ru.devmark.chess.models.HistoryItem
 import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.PieceColor

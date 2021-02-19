@@ -1,7 +1,7 @@
 package ru.devmark.chess
 
 import ru.devmark.chess.engine.Board
-import ru.devmark.chess.engine.BoardUtils
+import ru.devmark.chess.engine.impl.BoardUtils
 import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.PieceColor
 import ru.devmark.chess.models.Point
