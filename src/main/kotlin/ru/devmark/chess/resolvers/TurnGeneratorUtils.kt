@@ -19,11 +19,11 @@ fun MutableSet<Turn>.addPointIfCan(
         ?.let {
             when {
                 otherPiece == null -> { // нет фигуры
-                    this += NormalTurn(from = from, to = to)
+                    this += NormalTurn(sourcePiece = current, from = from, to = to)
                     true
                 }
                 otherPiece.color != current.color -> { // вражеская фигура
-                    this += NormalTurn(from = from, to = to, enemyPiece = otherPiece)
+                    this += NormalTurn(sourcePiece = current, from = from, to = to, enemyPiece = otherPiece)
                     false
                 }
                 else -> { // своя фигура

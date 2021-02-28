@@ -7,14 +7,12 @@ import ru.devmark.chess.models.HistoryItem
 import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.PieceColor
 import ru.devmark.chess.models.Point
-import ru.devmark.chess.models.PromotionTurn
 import ru.devmark.chess.models.Turn
 
 class BoardImpl : Board {
 
     private val pieces: MutableMap<Point, Piece> = initBoard()
 
-    // todo в истории хранить объекты Turn
     private val history = mutableListOf<HistoryItem>()
 
     override fun getPieces(): Map<Point, Piece> = pieces
@@ -79,15 +77,7 @@ class BoardImpl : Board {
         turn: Turn,
         state: GameState
     ) {
-        val from = turn.from
-        val to = turn.to
-        val enemyPieceType = turn.enemyPiece
-        val toType = if (turn is PromotionTurn) {
-            turn.toType
-        } else null
-        // todo добавить в Turn тип исходной фигуры и переопределить toString()
-        val turnNotation =
-            "${selectedPiece.type.notation}${from.notation()}${enemyPieceType?.let { "x" } ?: "-"}${to.notation()}${toType?.notation ?: ""}${state.notation}"
+        val turnNotation = "$turn${state.notation}"
 
         if (selectedPiece.color == PieceColor.WHITE) {
             // белые всегда ходят первыми, поэтому для записи их хода всегда создаём новый элемент в истории
@@ -103,8 +93,6 @@ class BoardImpl : Board {
             history.add(last.copy(black = turnNotation))
         }
     }
-
-    private fun Point.notation(): String = "${LETTERS[this.x]}${this.y + 1}"
 
     private fun initBoard(): MutableMap<Point, Piece> =
         mutableMapOf(
@@ -155,8 +143,6 @@ class BoardImpl : Board {
         )
 
     private companion object {
-        const val LETTERS = "abcdefgh"
-
         val UTILS = BoardUtils()
         val WHITE_FACTORY: PieceFactory = WhitePieceFactory()
         val BLACK_FACTORY: PieceFactory = BlackPieceFactory()
