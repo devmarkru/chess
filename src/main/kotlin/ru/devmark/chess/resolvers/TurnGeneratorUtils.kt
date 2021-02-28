@@ -5,7 +5,7 @@ import ru.devmark.chess.models.Piece
 import ru.devmark.chess.models.Point
 import ru.devmark.chess.models.Turn
 
-fun MutableSet<Turn>.addPointIfCan(
+fun MutableSet<Turn>.addPointIfPossible(
     position: Point,
     pieces: Map<Point, Piece>,
     deltaX: Int,
@@ -41,16 +41,16 @@ fun generateRectangularTurns(position: Point, pieces: Map<Point, Piece>, maxRang
     var bottom = true
     for (i in 1..maxRange) {
         if (left) {
-            left = spaces.addPointIfCan(position, pieces, -i, 0)
+            left = spaces.addPointIfPossible(position, pieces, -i, 0)
         }
         if (right) {
-            right = spaces.addPointIfCan(position, pieces, i, 0)
+            right = spaces.addPointIfPossible(position, pieces, i, 0)
         }
         if (top) {
-            top = spaces.addPointIfCan(position, pieces, 0, i)
+            top = spaces.addPointIfPossible(position, pieces, 0, i)
         }
         if (bottom) {
-            bottom = spaces.addPointIfCan(position, pieces, 0, -i)
+            bottom = spaces.addPointIfPossible(position, pieces, 0, -i)
         }
     }
     return spaces
@@ -64,16 +64,16 @@ fun generateDiagonalTurns(position: Point, pieces: Map<Point, Piece>, maxRange: 
     var rightBottom = true
     for (i in 1..maxRange) {
         if (leftTop) {
-            leftTop = spaces.addPointIfCan(position, pieces, -i, i)
+            leftTop = spaces.addPointIfPossible(position, pieces, -i, i)
         }
         if (rightTop) {
-            rightTop = spaces.addPointIfCan(position, pieces, i, i)
+            rightTop = spaces.addPointIfPossible(position, pieces, i, i)
         }
         if (leftBottom) {
-            leftBottom = spaces.addPointIfCan(position, pieces, -i, -i)
+            leftBottom = spaces.addPointIfPossible(position, pieces, -i, -i)
         }
         if (rightBottom) {
-            rightBottom = spaces.addPointIfCan(position, pieces, i, -i)
+            rightBottom = spaces.addPointIfPossible(position, pieces, i, -i)
         }
     }
     return spaces

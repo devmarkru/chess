@@ -14,9 +14,9 @@ class KnightTurnGenerator : TurnGenerator {
     }
 
     private fun MutableSet<Turn>.addPointsIfCan(position: Point, pieces: Map<Point, Piece>, absX: Int, absY: Int) {
-        this.addPointIfCan(position, pieces, absX, absY)
-        this.addPointIfCan(position, pieces, absX, -absY)
-        this.addPointIfCan(position, pieces, -absX, absY)
-        this.addPointIfCan(position, pieces, -absX, -absY)
+        this.addPointIfPossible(position, pieces, absX, absY)
+        this.addPointIfPossible(position, pieces, absX, -absY)
+        this.addPointIfPossible(position, pieces, -absX, absY)
+        this.addPointIfPossible(position, pieces, -absX, -absY)
     }
 }
