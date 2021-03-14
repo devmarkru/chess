@@ -9,7 +9,7 @@ class PromotionTurn(
 ) : Turn {
     override fun execute(pieces: MutableMap<Point, Piece>) {
         pieces.remove(from)
-        pieces[to] = sourcePiece
+        pieces[to] = sourcePiece.copy(type = toType)
     }
 
     override fun revert(pieces: MutableMap<Point, Piece>) {

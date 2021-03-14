@@ -43,7 +43,7 @@ class ChessApp : Application() {
             (FIELD_SIZE * 9).toDouble()
         )
         val gc = canvas.graphicsContext2D
-        drawBoard(gc, emptySet())
+        drawBoard(gc, null, emptySet())
         drawPieces(gc)
         drawText(gc, "Первый ход белых")
 
@@ -78,7 +78,7 @@ class ChessApp : Application() {
         board.getPieces()[selectedPoint]?.let { piece ->
             selectedPiecePoint = selectedPoint
             val availableSpaces = board.getTurnsForPiece(selectedPoint).map { it.to }.toMutableSet()
-            drawBoard(gc, availableSpaces + selectedPoint)
+            drawBoard(gc, selectedPoint, availableSpaces)
             drawPieces(gc)
         }
     }
@@ -98,7 +98,7 @@ class ChessApp : Application() {
             val gameState = board.executeTurn(selectedTurn)
             selectedPiecePoint = null
             displayLastTurn(gc, board.getHistory().last())
-            drawBoard(gc, emptySet())
+            drawBoard(gc, null, emptySet())
             drawPieces(gc)
 
             if (!gameState.isFinal) {
@@ -108,7 +108,7 @@ class ChessApp : Application() {
                     board.executeTurn(aiTurn)
                     selectedPiecePoint = null
                     displayLastTurn(gc, board.getHistory().last())
-                    drawBoard(gc, emptySet())
+                    drawBoard(gc, null, emptySet())
                     drawPieces(gc)
                 }.start()
             }
@@ -116,13 +116,10 @@ class ChessApp : Application() {
     }
 
     private fun showPromotionDialog(): PieceType {
-        val piecesForPromotion = listOf(
-            PieceType.QUEEN,
-            PieceType.ROOK,
-            PieceType.BISHOP,
-            PieceType.KNIGHT
-        )
-        val choices = piecesForPromotion.map { it.nameRu }
+        val piecesForPromotion = PieceType.values()
+            .filter { it.useForPromotion }
+        val choices = piecesForPromotion
+            .map { it.nameRu }
         val dialog: ChoiceDialog<String> = ChoiceDialog<String>(
             choices.first(),
             choices
@@ -135,7 +132,7 @@ class ChessApp : Application() {
         return piecesForPromotion[choices.indexOf(choice)]
     }
 
-    private fun drawBoard(gc: GraphicsContext, selectedSpaces: Set<Point>) {
+    private fun drawBoard(gc: GraphicsContext, selectedPoint: Point?, availableSpaces: Set<Point>) {
         for (j in 7 downTo 0) {
             var color = if (j % 2 == 0) {
                 DARK
@@ -158,11 +155,22 @@ class ChessApp : Application() {
             }
         }
 
-        selectedSpaces.forEach { point ->
-            val borderSize = 4
+        val borderSize = 4
+
+        selectedPoint?.let { point ->
             gc.stroke = SELECTED
             gc.lineWidth = borderSize.toDouble()
             gc.strokeRect(
+                (point.x * FIELD_SIZE + borderSize).toDouble(),
+                ((7 - point.y) * FIELD_SIZE + borderSize).toDouble(),
+                (FIELD_SIZE - borderSize * 2).toDouble(),
+                (FIELD_SIZE - borderSize * 2).toDouble()
+            )
+        }
+
+        availableSpaces.forEach { point ->
+            gc.fill = SELECTED
+            gc.fillRect(
                 (point.x * FIELD_SIZE + borderSize).toDouble(),
                 ((7 - point.y) * FIELD_SIZE + borderSize).toDouble(),
                 (FIELD_SIZE - borderSize * 2).toDouble(),

@@ -72,34 +72,16 @@ class PawnTurnGenerator : TurnGenerator {
         val promotionY = getPromotionY(current.color)
         val from = position
         if (to.y == promotionY) {
-            this += PromotionTurn(
-                sourcePiece = current,
-                from = from,
-                to = to,
-                enemyPiece = enemyPiece,
-                toType = PieceType.KNIGHT
-            )
-            this += PromotionTurn(
-                sourcePiece = current,
-                from = from,
-                to = to,
-                enemyPiece = enemyPiece,
-                toType = PieceType.BISHOP
-            )
-            this += PromotionTurn(
-                sourcePiece = current,
-                from = from,
-                to = to,
-                enemyPiece = enemyPiece,
-                toType = PieceType.ROOK
-            )
-            this += PromotionTurn(
-                sourcePiece = current,
-                from = from,
-                to = to,
-                enemyPiece = enemyPiece,
-                toType = PieceType.QUEEN
-            )
+            this += PieceType.values().filter { it.useForPromotion }
+                .map { toType ->
+                    PromotionTurn(
+                        sourcePiece = current,
+                        from = from,
+                        to = to,
+                        enemyPiece = enemyPiece,
+                        toType = toType
+                    )
+                }
         } else {
             this += NormalTurn(sourcePiece = current, from = from, to = to, enemyPiece = enemyPiece)
         }
