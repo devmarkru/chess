@@ -9,6 +9,8 @@ import ru.devmark.chess.models.Turn
 
 interface Board {
 
+    fun load(initialPieces: Map<Point, Piece>)
+
     fun getPieces(): Map<Point, Piece>
 
     fun getHistory(): List<HistoryItem>

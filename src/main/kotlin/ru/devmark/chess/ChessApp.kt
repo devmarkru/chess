@@ -36,6 +36,8 @@ class ChessApp : Application() {
 
     override fun start(primaryStage: Stage) {
         primaryStage.title = "Шахматы"
+        val initialPieces = READER.readFileFromResource("/boards/initial.txt")
+        board.load(initialPieces)
         initImages()
         val root = Group()
         val canvas = Canvas(
@@ -121,7 +123,7 @@ class ChessApp : Application() {
         val choices = piecesForPromotion
             .map { it.nameRu }
         val dialog: ChoiceDialog<String> = ChoiceDialog<String>(
-            choices.first(),
+            choices.last(),
             choices
         )
         dialog.headerText = "В какую фигуру превратить пешку?"
@@ -231,10 +233,12 @@ class ChessApp : Application() {
     }
 
     companion object {
+        private const val FIELD_SIZE = 100
+
         private val DARK = Color.DARKCYAN
         private val LIGHT = Color.LIGHTGRAY
         private val SELECTED = Color.ORANGE
-        private const val FIELD_SIZE = 100
+        private val READER = BoardReader()
 
         @JvmStatic
         fun main(args: Array<String>) {

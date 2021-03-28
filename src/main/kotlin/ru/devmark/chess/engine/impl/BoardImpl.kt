@@ -1,7 +1,6 @@
 package ru.devmark.chess.engine.impl
 
 import ru.devmark.chess.engine.Board
-import ru.devmark.chess.engine.PieceFactory
 import ru.devmark.chess.models.GameState
 import ru.devmark.chess.models.HistoryItem
 import ru.devmark.chess.models.Piece
@@ -10,13 +9,15 @@ import ru.devmark.chess.models.Point
 import ru.devmark.chess.models.Turn
 
 class BoardImpl : Board {
-
-    private val pieces: MutableMap<Point, Piece> = initBoard()
-
+    private val pieces = mutableMapOf<Point, Piece>()
     private val history = mutableListOf<HistoryItem>()
 
     override fun getPieces(): Map<Point, Piece> = pieces
     override fun getHistory(): List<HistoryItem> = history
+
+    override fun load(initialPieces: Map<Point, Piece>) {
+        pieces.putAll(initialPieces)
+    }
 
     /**
      * для указанной фигуры возвращает все доступные для неё клетки
@@ -94,57 +95,7 @@ class BoardImpl : Board {
         }
     }
 
-    private fun initBoard(): MutableMap<Point, Piece> =
-        mutableMapOf(
-            // белые фигуры
-            Point(0, 1) to WHITE_FACTORY.createPawn(),
-            Point(1, 1) to WHITE_FACTORY.createPawn(),
-            Point(2, 1) to WHITE_FACTORY.createPawn(),
-            Point(3, 1) to WHITE_FACTORY.createPawn(),
-            Point(4, 1) to WHITE_FACTORY.createPawn(),
-            Point(5, 1) to WHITE_FACTORY.createPawn(),
-            Point(6, 1) to WHITE_FACTORY.createPawn(),
-            Point(7, 1) to WHITE_FACTORY.createPawn(),
-
-            Point(1, 0) to WHITE_FACTORY.createKnight(),
-            Point(6, 0) to WHITE_FACTORY.createKnight(),
-
-            Point(2, 0) to WHITE_FACTORY.createBishop(),
-            Point(5, 0) to WHITE_FACTORY.createBishop(),
-
-            Point(0, 0) to WHITE_FACTORY.createRook(),
-            Point(7, 0) to WHITE_FACTORY.createRook(),
-
-            // королева всегда стоит на поле своего цвета
-            Point(3, 0) to WHITE_FACTORY.createQueen(),
-            Point(4, 0) to WHITE_FACTORY.createKing(),
-
-            // чёрные фигуры
-            Point(0, 6) to BLACK_FACTORY.createPawn(),
-            Point(1, 6) to BLACK_FACTORY.createPawn(),
-            Point(2, 6) to BLACK_FACTORY.createPawn(),
-            Point(3, 6) to BLACK_FACTORY.createPawn(),
-            Point(4, 6) to BLACK_FACTORY.createPawn(),
-            Point(5, 6) to BLACK_FACTORY.createPawn(),
-            Point(6, 6) to BLACK_FACTORY.createPawn(),
-            Point(7, 6) to BLACK_FACTORY.createPawn(),
-
-            Point(1, 7) to BLACK_FACTORY.createKnight(),
-            Point(6, 7) to BLACK_FACTORY.createKnight(),
-
-            Point(2, 7) to BLACK_FACTORY.createBishop(),
-            Point(5, 7) to BLACK_FACTORY.createBishop(),
-
-            Point(0, 7) to BLACK_FACTORY.createRook(),
-            Point(7, 7) to BLACK_FACTORY.createRook(),
-
-            Point(3, 7) to BLACK_FACTORY.createQueen(),
-            Point(4, 7) to BLACK_FACTORY.createKing()
-        )
-
     private companion object {
         val UTILS = BoardUtils()
-        val WHITE_FACTORY: PieceFactory = WhitePieceFactory()
-        val BLACK_FACTORY: PieceFactory = BlackPieceFactory()
     }
 }
