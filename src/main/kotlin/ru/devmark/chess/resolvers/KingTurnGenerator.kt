@@ -6,12 +6,13 @@ import ru.devmark.chess.models.Turn
 
 class KingTurnGenerator : TurnGenerator {
 
-    override fun getTurns(position: Point, pieces: Map<Point, Piece>): Set<Turn> {
-        val spaces = mutableSetOf<Turn>()
-        spaces.addAll(generateRectangularTurns(position, pieces, MAX_RANGE))
-        spaces.addAll(generateDiagonalTurns(position, pieces, MAX_RANGE))
-        return spaces
-    }
+    override fun getTurns(position: Point, pieces: Map<Point, Piece>): Set<Turn> =
+        listOf(
+            generateRectangularTurns(position, pieces, MAX_RANGE),
+            generateDiagonalTurns(position, pieces, MAX_RANGE)
+        )
+            .flatten()
+            .toSet()
 
     private companion object {
         const val MAX_RANGE = 1
