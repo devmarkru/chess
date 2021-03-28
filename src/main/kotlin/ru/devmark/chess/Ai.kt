@@ -12,47 +12,54 @@ class Ai(private val color: PieceColor) {
 
     fun nextTurn(board: Board): Turn {
         val pieces = HashMap(board.getPieces())
+        val currentSpacesUnderEnemyAttack = utils.getSpacesUnderAttack(pieces)
+            .getValue(color.other())
         val profits = board.getTurnsForColor(color)
             .entries.map { (from, turns) ->
                 turns.map { turn ->
-                    turn.execute(pieces)
-                    val profits = getProfits(pieces)
-                    turn.revert(pieces)
                     TurnProfitInfo(
                         from = from,
                         turn = turn,
-                        ownProfit = profits.getValue(color),
-                        enemyProfit = profits.getValue(color.other())
+                        profit = turn.getProfit(pieces, currentSpacesUnderEnemyAttack)
                     )
                 }
             }
             .flatten()
 
-        val maxOwnProfit = profits.maxOf { it.ownProfit }
+        val maxOwnProfit = profits.maxOf { it.profit }
 
-        val turnPriceInfo = profits.filter { it.ownProfit == maxOwnProfit }
+        val turnPriceInfo = profits.filter { it.profit == maxOwnProfit }
             .shuffled() // вносим элемент случайности для ходов с одинаковым профитом
-            .sortedBy { it.enemyProfit } // у соперника должен быть минимальный профит
             .first()
 
         return turnPriceInfo.turn
     }
 
-    private fun getProfits(pieces: Map<Point, Piece>): Map<PieceColor, Int> {
-        val profits = hashMapOf<PieceColor, Int>()
-        val spacesUnderAttack = utils.getSpacesUnderAttack(pieces)
-        pieces.forEach { (position, piece) ->
-            profits.incrementProfit(piece.color, piece.getPrice())
-            // если фигура может быть атакована противником, то увеличиваем его профит тоже
-            if (position in spacesUnderAttack.getValue(piece.color.other())) {
-                profits.incrementProfit(piece.color.other(), piece.getPrice())
-            }
+    private fun Turn.getProfit(
+        pieces: HashMap<Point, Piece>,
+        currentSpacesUnderEnemyAttack: Set<Point>
+    ): Int {
+        var profit = 0
+        // если в результате хода уничтожаем вражескую фигуру,
+        // то прибавляем её стоимость к профиту
+        this.enemyPiece?.let { profit += it.getPrice() }
+        // делаем пробный ход
+        this.execute(pieces)
+        // определяем атакуемые клетки после выполнения хода
+        val newSpacesUnderEnemyAttack = utils.getSpacesUnderAttack(pieces)
+            .getValue(color.other())
+        if (this.from in currentSpacesUnderEnemyAttack && this.to !in newSpacesUnderEnemyAttack) {
+            // если в результате хода уводим фигуру из под атаки,
+            // то прибавляем её стоимость к профиту
+            profit += this.sourcePiece.getPrice()
+        } else if (this.from !in currentSpacesUnderEnemyAttack && this.to in newSpacesUnderEnemyAttack) {
+            // если фигура после совершения хода попадает под атаку,
+            // то вычитаем её стоимость из профита
+            profit -= this.sourcePiece.getPrice()
         }
-        return profits
-    }
-
-    private fun MutableMap<PieceColor, Int>.incrementProfit(color: PieceColor, value: Int) {
-        this[color] = (this[color] ?: 0) + value
+        // отменяем пробный ход
+        this.revert(pieces)
+        return profit
     }
 
     private fun Piece.getPrice() = this.type.price
